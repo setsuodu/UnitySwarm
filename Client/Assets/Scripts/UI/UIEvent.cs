@@ -1,6 +1,6 @@
 ﻿using System;
-using System.Threading.Tasks;
 
+// 全局事件，框架的解耦中心
 public static class UIEvent
 {
     // 登录相关事件

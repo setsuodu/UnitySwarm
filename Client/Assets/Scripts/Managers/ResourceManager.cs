@@ -63,7 +63,7 @@ public class ResourceManager : MonoBehaviour
 
 #if UNITY_EDITOR
         // 1. 编辑器模式加载
-        await System.Threading.Tasks.Task.Yield();
+        await Task.Yield();
         string fullPath = $"Assets/Bundles/{path}.prefab";
         GameObject prefab = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>(fullPath);
 
@@ -74,10 +74,10 @@ public class ResourceManager : MonoBehaviour
         }
         instance = UnityEngine.Object.Instantiate(prefab, parent);
 #else
-    // 2. 真机模式加载 (Addressables)
-    var h = UnityEngine.AddressableAssets.Addressables.InstantiateAsync(path, parent);
-    instance = await h.Task;
-    _instanceHandles[instance] = h;
+        // 2. 真机模式加载 (Addressables)
+        var h = UnityEngine.AddressableAssets.Addressables.InstantiateAsync(path, parent);
+        instance = await h.Task;
+        _instanceHandles[instance] = h;
 #endif
 
         // --- 以下是通用逻辑 (Shared Logic) ---
