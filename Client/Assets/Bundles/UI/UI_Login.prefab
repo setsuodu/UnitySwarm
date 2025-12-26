@@ -13,7 +13,7 @@ GameObject:
   - component: {fileID: 6789887074867229531}
   - component: {fileID: 7598541912295024923}
   m_Layer: 5
-  m_Name: btnLogin
+  m_Name: btnConnect
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -134,7 +134,7 @@ GameObject:
   - component: {fileID: 587721284984848751}
   - component: {fileID: 1885733738053322345}
   m_Layer: 5
-  m_Name: inputAccount
+  m_Name: inputIP
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -499,7 +499,7 @@ MonoBehaviour:
     m_HorizontalOverflow: 0
     m_VerticalOverflow: 0
     m_LineSpacing: 1
-  m_Text: Enter IP...
+  m_Text: 127.0.0.1
 --- !u!1 &5746918497893103012
 GameObject:
   m_ObjectHideFlags: 0

@@ -1,32 +1,35 @@
-﻿using UnityEngine;
+﻿using LiteNetLib;
+using UnityEngine;
 
+// 放逻辑（HandleLogin、事件处理）
+// 负责纯业务逻辑（比如点击按钮后具体怎么连接服务器、发包等）
 public partial class UI_Login // 同样必须加 partial
 {
-    private void InitView()
+    void InitView()
     {
+        Debug.Log("[UI] UI_Login.InitView");
+        inputIP.text = NetUtils.GetLocalIp(LocalAddrType.IPv4);
+
         // 绑定按钮点击
-        btnLogin.onClick.AddListener(HandleLogin);
+        btnConnect.onClick.RemoveAllListeners();
+        btnConnect.onClick.AddListener(HandleConnect);
     }
 
-    private void HandleLogin()
+    async void HandleConnect()
     {
-        string account = inputAccount.text;
-        string pwd = inputPassword.text;
+        string ip = inputIP.text; // 假设你加了个输入框输入IP
+        //Debug.Log($"ip is null ? {string.IsNullOrEmpty(ip)}");
 
-        // 模拟发送 Packet（全栈开发这里直接调你的网络模块）
-        Debug.Log($"发送登录请求: {account}");
+        // 1. 先连接服务器
+        TTTGameClient.Instance.ConnectToServer(ip);
 
-        // 假设这里收到服务器回包
-        bool isSuccess = (account == "admin");
+        // 2. 等待连接成功（可以用事件或Task完成源）
+        await TTTGameClient.Instance.WaitForConnected(); // 你可以自己加这个方法
+        
+        Debug.Log("<color=green>连接服务器成功，可以进入游戏界面</color>");
+        UIManager.Instance.PopPanel(); // 移除自己
 
-        if (isSuccess)
-        {
-            // 通过 UIEvent 广播，不直接调 UIManager，解耦！
-            UIEvent.OnLoginSuccess?.Invoke(account);
-        }
-        else
-        {
-            UIEvent.OnShowToast?.Invoke("账号或密码错误");
-        }
+        // 3. 连接成功后，再发登录包或直接进入游戏
+        await UIManager.Instance.PushPanel<UI_Game>();
     }
 }

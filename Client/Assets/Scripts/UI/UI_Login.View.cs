@@ -2,39 +2,28 @@
 using UnityEngine;
 using UnityEngine.UI;
 
-// 必须加 partial
-public partial class UI_Login : BasePanel
+// 放 UI 组件声明 + Awake/OnEnter 等生命周期
+// 负责视图层（UI 组件声明、BasePanel 生命周期、事件订阅/取消订阅）
+public partial class UI_Login : BasePanel // 必须加 partial
 {
     [Header("UI Components")]
-    [SerializeField] private InputField inputAccount;
-    [SerializeField] private InputField inputPassword;
-    [SerializeField] private Button btnLogin;
-    [SerializeField] private Text txtStatus;
+    [SerializeField] private InputField inputIP;
+    [SerializeField] private Button btnConnect;
 
-    protected override void Awake()
-    {
-        base.Awake(); // 这一步会完成自动绑定
-
-        // 现在可以直接使用 btn_Login，不需要 Find
-        btnLogin.onClick.AddListener(() => {
-            Debug.Log($"用户 {inputAccount.text} 尝试登录");
-        });
-    }
+    protected override void Awake() => base.Awake(); // 这一步会完成自动绑定
 
     // BasePanel 的重写
     public override void OnEnter()
     {
-        base.OnEnter();
-        InitView();
-        // 绑定 UI 事件
-        UIEvent.OnLoginSuccess += OnLoginSuccessCallback;
+        base.OnEnter(); // 这一行绝对不能漏！
+        InitView(); // 把按钮事件绑定移到逻辑文件去
+        UIEvent.OnLoginSuccess += OnLoginSuccessCallback; // 绑定事件
     }
 
     public override void OnExit()
     {
+        UIEvent.OnLoginSuccess -= OnLoginSuccessCallback; // 必须取消绑定！
         base.OnExit();
-        // 必须取消绑定！
-        UIEvent.OnLoginSuccess -= OnLoginSuccessCallback;
     }
 
     // 事件系统触发的中间层
@@ -47,7 +36,7 @@ public partial class UI_Login : BasePanel
 
     private async Task HandleLoginSuccess(string username)
     {
-        txtStatus.text = $"登录成功: {username}";
+        //txtStatus.text = $"登录成功: {username}";
         // 可以在这里跳转到下一个面板
         await UIManager.Instance.PushPanel<UI_Game>();
     }

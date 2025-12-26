@@ -9,15 +9,13 @@ public class UIManager : MonoBehaviour
 {
     public static UIManager Instance { get; private set; }
 
-    [Header("UI Hierarchy")]
-    private Transform _uiRoot;
-    private Dictionary<string, Transform> _layers = new Dictionary<string, Transform>();
+    // 逻辑根节点：DontDestroyOnLoad，只存脚本
+    // 渲染根节点：随场景销毁，挂载 Canvas
+    private RectTransform _uiRoot;
+    private Dictionary<string, RectTransform> _layers = new Dictionary<string, RectTransform>();
 
-    // 缓存已实例化的面板
     private Dictionary<Type, BasePanel> _panelDict = new Dictionary<Type, BasePanel>();
-    // 缓存正在加载中的任务，防止重复触发加载
     private Dictionary<Type, Task> _loadingTasks = new Dictionary<Type, Task>();
-    // UI 堆栈
     private Stack<BasePanel> _panelStack = new Stack<BasePanel>();
 
     private void Awake()
@@ -25,8 +23,8 @@ public class UIManager : MonoBehaviour
         if (Instance == null)
         {
             Instance = this;
-            DontDestroyOnLoad(gameObject);
-            InitRoot();
+            DontDestroyOnLoad(gameObject); // 仅逻辑管理器不销毁
+            EnsureUIRoot();
         }
         else
         {
@@ -35,130 +33,128 @@ public class UIManager : MonoBehaviour
     }
 
     /// <summary>
-    /// 初始化 UI 根节点与层级
+    /// 核心修复：确保渲染层级正确嵌套
     /// </summary>
-    private void InitRoot()
+    public void EnsureUIRoot()
     {
-        Canvas canvas = FindFirstObjectByType<Canvas>();
-        if (canvas == null)
+        // 如果引用还在且物体没被销毁（切场景），就跳过
+        if (_uiRoot != null) return;
+
+        // 1. 创建 UI 实体根节点
+        GameObject rootGo = new GameObject("UI_Root");
+
+        // 【关键修复点】：必须先手动加 RectTransform，防止后面加 Canvas 时引用丢失
+        _uiRoot = rootGo.AddComponent<RectTransform>();
+
+        // 2. 挂载根 Canvas 组件
+        Canvas rootCanvas = rootGo.AddComponent<Canvas>();
+        rootCanvas.renderMode = RenderMode.ScreenSpaceOverlay;
+
+        // 3. 挂载适配器并设置参考分辨率
+        CanvasScaler scaler = rootGo.AddComponent<CanvasScaler>();
+        scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+        scaler.referenceResolution = new Vector2(1920, 1080);
+        scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
+        scaler.matchWidthOrHeight = 0.5f;
+
+        // 4. 挂载射线拦截器
+        rootGo.AddComponent<GraphicRaycaster>();
+
+        // 5. 此时 _uiRoot 已经是 RectTransform 且稳定了，开始创建子层级
+        _layers.Clear();
+        CreateLayer("Normal", 0);
+        CreateLayer("PopUp", 100);
+        CreateLayer("Top", 200);
+
+        // 6. 自动补全 EventSystem
+        if (GameObject.FindFirstObjectByType<EventSystem>() == null)
         {
-            GameObject root = new GameObject("UI_Root");
-            canvas = root.AddComponent<Canvas>();
-            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-            root.AddComponent<CanvasScaler>();
-            root.AddComponent<GraphicRaycaster>();
-            _uiRoot = root.transform;
-        }
-        else
-        {
-            _uiRoot = canvas.transform;
+            GameObject esGo = new GameObject("EventSystem");
+            esGo.AddComponent<EventSystem>();
+            esGo.AddComponent<StandaloneInputModule>();
         }
 
-        // 检查 EventSystem
-        if (FindFirstObjectByType<EventSystem>() == null)
-        {
-            new GameObject("EventSystem", typeof(EventSystem), typeof(StandaloneInputModule));
-        }
-
-        // 创建基础层级（可选：控制不同面板的遮挡顺序）
-        string[] layerNames = { "Normal", "PopUp", "Top" };
-        foreach (var name in layerNames)
-        {
-            RectTransform layer = new GameObject(name, typeof(RectTransform)).GetComponent<RectTransform>();
-            layer.SetParent(_uiRoot, false);
-            layer.anchorMin = Vector2.zero;
-            layer.anchorMax = Vector2.one;
-            layer.offsetMin = layer.offsetMax = Vector2.zero;
-            _layers.Add(name, layer);
-        }
+        Debug.Log("<color=green>UIManager: UI_Root 实体层级初始化成功！</color>");
     }
 
-    /// <summary>
-    /// 核心方法：获取或加载面板（带任务缓存保护）
-    /// </summary>
+    private void CreateLayer(string name, int order)
+    {
+        // 创建层级物体，顺便加上必要组件
+        GameObject go = new GameObject(name, typeof(RectTransform), typeof(Canvas), typeof(GraphicRaycaster));
+        RectTransform rt = go.GetComponent<RectTransform>();
+
+        // 这里的 _uiRoot 绝对不会是 null 了
+        rt.SetParent(_uiRoot, false);
+
+        // 锚点全屏拉伸
+        rt.anchorMin = Vector2.zero;
+        rt.anchorMax = Vector2.one;
+        rt.offsetMin = rt.offsetMax = Vector2.zero;
+
+        // 设置子 Canvas 排序，实现层级覆盖
+        Canvas c = go.GetComponent<Canvas>();
+        c.overrideSorting = true;
+        c.sortingOrder = order;
+
+        _layers.Add(name, rt);
+    }
+
+    #region 面板管理逻辑
+
     public async Task<T> GetOrLoadPanel<T>() where T : BasePanel
     {
         Type type = typeof(T);
 
-        // 1. 如果已经存在实例，直接返回
-        if (_panelDict.TryGetValue(type, out var panel))
-        {
+        // 如果在当前场景已实例化且物体还在
+        if (_panelDict.TryGetValue(type, out var panel) && panel != null)
             return (T)panel;
-        }
 
-        // 2. 如果该面板正在加载中，返回现有的加载 Task，避免重复实例化
         if (_loadingTasks.TryGetValue(type, out var loadingTask))
-        {
             return await (Task<T>)loadingTask;
-        }
 
-        // 3. 开启加载流程并存入任务缓存
         Task<T> loadProcess = RealLoad<T>();
         _loadingTasks[type] = loadProcess;
 
-        try
-        {
-            return await loadProcess;
-        }
-        finally
-        {
-            // 加载完成后，无论成功失败都移除任务缓存
-            _loadingTasks.Remove(type);
-        }
+        try { return await loadProcess; }
+        finally { _loadingTasks.Remove(type); }
     }
 
     private async Task<T> RealLoad<T>() where T : BasePanel
     {
+        EnsureUIRoot(); // 实例化前最后一次确认根节点
+
         Type type = typeof(T);
         string path = $"UI/{type.Name}";
 
-        // 调用另一个单例 ResourceManager 执行具体的加载与实例化
+        // 默认将面板生成在 Normal 层级下
         T panel = await ResourceManager.Instance.InstantiateAsync<T>(path, _layers["Normal"]);
+        if (panel == null) return null;
 
-        if (panel == null)
-        {
-            Debug.LogError($"[UIManager] 无法加载面板: {path}");
-            return null;
-        }
-
-        // 重置 UI 变换
         RectTransform rt = panel.GetComponent<RectTransform>();
         rt.localPosition = Vector3.zero;
         rt.localScale = Vector3.one;
         rt.offsetMin = rt.offsetMax = Vector2.zero;
 
-        _panelDict.Add(type, panel);
+        _panelDict[type] = panel;
         return panel;
     }
 
-    /// <summary>
-    /// 打开/压入面板
-    /// </summary>
     public async Task<T> PushPanel<T>() where T : BasePanel
     {
-        // 暂停当前顶层面板
-        if (_panelStack.Count > 0)
-        {
-            _panelStack.Peek().OnPause();
-        }
+        EnsureUIRoot();
 
-        // 获取或加载新面板
+        if (_panelStack.Count > 0) _panelStack.Peek().OnPause();
+
         T panel = await GetOrLoadPanel<T>();
-
         if (panel != null)
         {
             panel.gameObject.SetActive(true);
             _panelStack.Push(panel);
             panel.OnEnter();
         }
-
         return panel;
     }
 
-    /// <summary>
-    /// 弹出/关闭顶层面板
-    /// </summary>
-    /// <param name="isDestroy">是否彻底从内存卸载</param>
     public void PopPanel(bool isDestroy = false)
     {
         if (_panelStack.Count <= 0) return;
@@ -166,20 +162,54 @@ public class UIManager : MonoBehaviour
         BasePanel topPanel = _panelStack.Pop();
         topPanel.OnExit();
 
+        HandleRelease(topPanel, isDestroy);
+
+        if (_panelStack.Count > 0) _panelStack.Peek().OnResume();
+    }
+
+    public void ClosePanel(BasePanel panel, bool isDestroy = false)
+    {
+        if (panel == null) return;
+
+        if (_panelStack.Count > 0 && _panelStack.Peek() == panel)
+        {
+            PopPanel(isDestroy);
+            return;
+        }
+
+        if (_panelStack.Contains(panel))
+        {
+            List<BasePanel> list = new List<BasePanel>(_panelStack);
+            list.Remove(panel);
+            panel.OnExit();
+            HandleRelease(panel, isDestroy);
+            list.Reverse();
+            _panelStack = new Stack<BasePanel>(list);
+        }
+    }
+
+    private void HandleRelease(BasePanel panel, bool isDestroy)
+    {
         if (isDestroy)
         {
-            _panelDict.Remove(topPanel.GetType());
-            ResourceManager.Instance.Release(topPanel.gameObject);
+            _panelDict.Remove(panel.GetType());
+            ResourceManager.Instance.Release(panel.gameObject);
         }
         else
         {
-            topPanel.gameObject.SetActive(false);
-        }
-
-        // 恢复上一个面板
-        if (_panelStack.Count > 0)
-        {
-            _panelStack.Peek().OnResume();
+            panel.gameObject.SetActive(false);
         }
     }
+
+    /// <summary>
+    /// 切场景时由外部调用，清空引用防止报错
+    /// </summary>
+    public void ClearOnLevelLoaded()
+    {
+        _panelStack.Clear();
+        _panelDict.Clear();
+        _uiRoot = null; // 标记根节点已毁，下次 Push 自动重建
+    }
+
+    #endregion
 }

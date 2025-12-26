@@ -1,39 +1,56 @@
 ﻿using System.Threading.Tasks;
 using UnityEngine;
 
-[RequireComponent(typeof(SimpleClient))]
 public class TTTGameClient : MonoBehaviour
 {
+    public static TTTGameClient Instance { get; private set; }
+
     private SimpleClient _net;
-    //private UI_Game _uiGame;
+    private TaskCompletionSource<bool> _connectTcs;
 
-    async void Start()
+    void Awake()
     {
+        if (Instance == null)
+        {
+            Instance = this;
+            DontDestroyOnLoad(gameObject);
+        }
+        else Destroy(gameObject);
+
         _net = GetComponent<SimpleClient>();
-
-        // 订阅服务器发来的状态包
+        _net.OnConnectedToServer += OnConnected;
         _net.Processor.SubscribeReusable<GameStatePacket>(OnReceiveState);
+    }
 
-        // 通过 UIManager 加载并推入游戏界面
-        await UIManager.Instance.PushPanel<UI_Login>();
+    //async void Start()
+    //{
+    //    await UIManager.Instance.PushPanel<UI_Login>();
+    //}
+
+    void OnConnected()
+    {
+        _connectTcs?.TrySetResult(true);
+        //Debug.Log("连接服务器成功");
     }
 
     public void ConnectToServer(string ip)
     {
+        _connectTcs = new TaskCompletionSource<bool>();
         _net.Connect(ip, 9050);
+        Debug.Log($"ConnectToServer: {ip}:9050");
     }
 
-    public void SendMove(int index)
-    {
-        _net.SendToServer(new ClickPacket { Index = index });
-    }
+    public Task WaitForConnected() => _connectTcs?.Task ?? Task.CompletedTask;
 
-    private void OnReceiveState(GameStatePacket packet)
+    public void SendMove(int index) => _net.SendToServer(new ClickPacket { Index = index });
+
+    // 收到落子回调
+    void OnReceiveState(GameStatePacket packet)
     {
         // 收到消息后，通知 UI 层更新视图
-        //if (_uiGame != null)
-        //{
-        //    _uiGame.RefreshBoard(packet.Index, packet.Mark);
-        //}
+        Debug.Log($"[C] index={packet.Index}, mark={packet.Mark}, status={packet.Status}");
+
+        UI_Game ui_game = UIManager.Instance.GetOrLoadPanel<UI_Game>().Result;
+        ui_game.RefreshBoard(packet.Index, packet.Mark);
     }
 }

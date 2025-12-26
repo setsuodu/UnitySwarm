@@ -11,7 +11,19 @@ public class CodeBundler : EditorWindow
         StringBuilder sb = new StringBuilder();
 
         // 1. 这里填入你想要导出的【脚本文件名】
-        string[] scriptNames = { "ResourceManager", "UIManager", "UI_Login" };
+        string[] scriptNames = {
+            "ResourceManager",
+            "Packet",
+            "SimpleClient",
+            "TTTGameClient",
+            "ResourceManager",
+            "BasePanel",
+            "UI_Login",
+            "UI_Login.View",
+            "UIBinder",
+            "UIEvent",
+            "UIManager",
+        };
 
         foreach (var name in scriptNames)
         {

@@ -11,16 +11,24 @@ public class TTTGameServer : MonoBehaviour
 	void Start()
 	{
 		_net = GetComponent<SimpleServer>();
-		_net.StartServer(9050);
-		Debug.Log("listen on 9050");
+        _net.StartServer(9050);
+		Debug.Log("[S] server listen on 9050");
 
-		// 订阅网络层的消息，并转回逻辑处理
-		_net.Processor.SubscribeReusable<ClickPacket, NetPeer>(HandleClick);
+        // 订阅网络层的消息，并转回逻辑处理
+        _net.Processor.SubscribeReusable<ClickPacket, NetPeer>(HandleClick);
 		for (int i = 0; i < 9; i++) board[i] = "";
-	}
 
-	private void HandleClick(ClickPacket packet, NetPeer peer)
+		_net.OnPlayerConnected += (netPeer) =>
+		{
+            //Debug.Log($"Client is connected: Id={netPeer.Id}");
+            //Debug.Log("OnPlayerConnected 委托执行");
+        };
+    }
+
+    private void HandleClick(ClickPacket packet, NetPeer peer)
 	{
+		Debug.Log($"[S] Click Packet: {packet.ToString()}");
+
 		if (board[packet.Index] != "") return;
 
 		string mark = isPlayerXTurn ? "X" : "O";

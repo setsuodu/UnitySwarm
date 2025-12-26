@@ -17,7 +17,20 @@ public class ResourceManager : MonoBehaviour
     // 缓存实例化的 GameObject 对应的句柄
     private Dictionary<GameObject, AsyncOperationHandle<GameObject>> _instanceHandles = new Dictionary<GameObject, AsyncOperationHandle<GameObject>>();
 
-    private void Awake() => Instance = this;
+    private void Awake()
+    {
+        if (Instance == null)
+        {
+            Instance = this;
+            // 确保场景切换时不被销毁
+            DontDestroyOnLoad(gameObject);
+        }
+        else
+        {
+            // 防止重复创建（比如从其他场景跳回初始场景时）
+            Destroy(gameObject);
+        }
+    }
 
     /// <summary>
     /// 异步加载原始资源 (Texture, AudioClip, TextAsset等)

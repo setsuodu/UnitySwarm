@@ -25,8 +25,12 @@ public class SimpleServer : MonoBehaviour, INetEventListener
     }
 
     public void OnNetworkReceive(NetPeer peer, NetPacketReader reader, byte channel, DeliveryMethod delivery) => Processor.ReadAllPackets(reader, peer);
-    public void OnConnectionRequest(ConnectionRequest request) => request.Accept();
-    public void OnPeerConnected(NetPeer peer) => OnPlayerConnected?.Invoke(peer);
+    public void OnConnectionRequest(ConnectionRequest request) => request.AcceptIfKey("ExampleGame");
+    public void OnPeerConnected(NetPeer peer)
+    {
+        //Debug.Log($"Client is connected: Id={peer.Id}, Tag={peer.Tag}, Address={peer.Address}, RemoteId={peer.RemoteId}, ConnectionState={peer.ConnectionState}");
+        OnPlayerConnected?.Invoke(peer);
+    }
 
     // 其他接口留空...
     public void OnPeerDisconnected(NetPeer p, DisconnectInfo d) { }

@@ -14,7 +14,7 @@ public class SimpleClient : MonoBehaviour, INetEventListener
     {
         _netManager = new NetManager(this) { AutoRecycle = true };
         _netManager.Start();
-        _netManager.Connect(ip, port, "");
+        _netManager.Connect(ip, port, "ExampleGame");
     }
 
     void Update() => _netManager?.PollEvents();

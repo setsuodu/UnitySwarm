@@ -1,8 +1,16 @@
 # 核心管理类
-GameManager.cs
+ResourceManager.cs
 UIManager.cs
 NetworkManager.cs
 
-# 登录模块
+# 网络模块
+Packet.cs
+SimpleClient.cs
+TTTGameClient.cs
+
+# UI模块
+BasePanel.cs
 UI_Login.cs
-LoginController.cs
+UI_Login.View.cs
+UIEvent.cs
+UIManager.cs
