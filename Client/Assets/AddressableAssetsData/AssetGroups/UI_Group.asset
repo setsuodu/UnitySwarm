@@ -15,16 +15,16 @@ MonoBehaviour:
   m_GroupName: UI_Group
   m_Data:
     m_SerializedData: []
-  m_GUID: 4839fd97543418d489599c93962be7b6
+  m_GUID: 36849684ff7ef8c41aa158702b9b2ad7
   m_SerializeEntries:
   - m_GUID: 1971afdba34d48644b3238b3fd7d1391
-    m_Address: UI_Game
+    m_Address: UI/UI_Game
     m_ReadOnly: 0
     m_SerializedLabels:
     - UI
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 4b0709c5464b411459145820a8a660e3
-    m_Address: UI_Login
+    m_Address: UI/UI_Login
     m_ReadOnly: 0
     m_SerializedLabels:
     - UI

@@ -61,8 +61,15 @@ public class AddressableExporter
             // 创建项
             var entry = settings.CreateOrMoveEntry(guid, group);
 
-            // 设置 Address 为文件名 (不带路径和后缀)，方便 UIManager 加载
-            entry.address = Path.GetFileNameWithoutExtension(assetPath);
+            // 【核心逻辑修改】：为了匹配 UIManager.cs 中的 path = $"UI/{type.Name}"
+            // 我们需要将 Address 从原来的 "UI_Login" 改为 "UI/UI_Login"
+            // 处理方法：去掉 "Assets/Bundles/" 前缀，并去掉后缀名
+            string relativePath = assetPath.Replace("Assets/Bundles/", "");
+            int lastDotIndex = relativePath.LastIndexOf('.');
+            string address = lastDotIndex > 0 ? relativePath.Substring(0, lastDotIndex) : relativePath;
+
+            // 设置 Address，方便 UIManager 加载
+            entry.address = address;
 
             // 给特定 Group 打上 Label (可选)
             if (groupName == "UI_Group") entry.SetLabel("UI", true);
