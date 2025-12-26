@@ -1,0 +1,8 @@
+# 核心管理类
+GameManager.cs
+UIManager.cs
+NetworkManager.cs
+
+# 登录模块
+UI_Login.cs
+LoginController.cs
