@@ -12,6 +12,10 @@ public class CodeBundler : EditorWindow
 
         // 1. 这里填入你想要导出的【脚本文件名】
         string[] scriptNames = {
+            "TicTacToeManager",
+            "SimpleServer",
+            "TTTGameServer",
+            "GameLauncher",
             "ResourceManager",
             "Packet",
             "SimpleClient",

@@ -20,7 +20,7 @@ public partial class UI_Game
     {
         Debug.Log($"[UI] 点击了棋位: {index}");
         // 通过客户端发送数据
-        TTTGameClient.Instance.SendMove(index);
+        TTTGameClient.Instance.RequestMove(index);
     }
 
     // 供 TTTGameClient 调用的更新方法
